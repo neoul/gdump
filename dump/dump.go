@@ -1,4 +1,4 @@
-package ydb
+package dump
 
 import (
 	"bufio"
