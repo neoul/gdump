@@ -8,42 +8,30 @@ import (
 	"strings"
 )
 
-// isValueNil returns true if either value is nil, or has dynamic type {ptr,
-// map, slice} with value nil.
-func isValueNil(value interface{}) bool {
-	if value == nil {
-		return true
+// NewlineAtEnd - inserts a newline after ValueDump if enabled
+var NewlineAtEnd bool = true
+
+// DefaultPrintDepth - the print level of the value printed
+var DefaultPrintDepth int = 3
+
+// Print - print the input value to Stdout
+func Print(value ...interface{}) {
+	for _, v := range value {
+		ValueDump(v, DefaultPrintDepth, func(x ...interface{}) { fmt.Print(x...) })
 	}
-	switch reflect.TypeOf(value).Kind() {
-	case reflect.Slice, reflect.Ptr, reflect.Map:
-		return reflect.ValueOf(value).IsNil()
-	}
-	return false
 }
 
-// areSameType returns true if t1 and t2 has the same reflect.Type,
-// otherwise it returns false.
-func areSameType(t1 reflect.Type, t2 reflect.Type) bool {
-	b1 := getBaseType(t1)
-	b2 := getBaseType(t2)
-	return b1 == b2
-}
-
-// getBaseType returns not reflect.Ptr type.
-func getBaseType(t reflect.Type) reflect.Type {
-	for ; t.Kind() == reflect.Ptr; t = t.Elem() {
-	}
-	return t
-}
-
-// DebugValueString returns a string representation of value which may be a value, ptr,
+// ValueDump returns a string representation of value which may be a value, ptr,
 // or struct type.
 // - value: The value to print.
 // - depth: The depth of the printed values and types.
 // - print: The print function
-func DebugValueString(value interface{}, depth int, print func(a ...interface{}), excludedField ...string) string {
+func ValueDump(value interface{}, depth int, print func(a ...interface{}), excludedField ...string) string {
 	v := reflect.ValueOf(value)
-	s := debugValueStr(v, depth, 0, "", false, false, excludedField...)
+	s := valueString(v, depth, 0, "", false, false, excludedField...)
+	if NewlineAtEnd {
+		s = s + "\n"
+	}
 	if print != nil {
 		reader := bufio.NewReader(strings.NewReader(s))
 		for {
@@ -65,14 +53,14 @@ func DebugValueString(value interface{}, depth int, print func(a ...interface{})
 	return s
 }
 
-// DebugValueStringInline returns a string representation of value which may be a value, ptr,
+// ValueDumpInline returns a string representation of value which may be a value, ptr,
 // or struct type.
 // - value: The value to print.
 // - depth: The depth of the printed values and types.
 // - print: The print function
-func DebugValueStringInline(value interface{}, depth int, print func(a ...interface{}), excludedField ...string) string {
+func ValueDumpInline(value interface{}, depth int, print func(a ...interface{}), excludedField ...string) string {
 	v := reflect.ValueOf(value)
-	s := debugValueStr(v, depth, 0, "", false, true, excludedField...)
+	s := valueString(v, depth, 0, "", false, true, excludedField...)
 	s = strings.ReplaceAll(s, "\n", " ")
 	if print != nil {
 		print(s)
@@ -92,7 +80,7 @@ func isExcludedField(fieldname string, excludedField ...string) bool {
 	return false
 }
 
-func debugValueStr(v reflect.Value, depth, ptrcnt int, indent string, disableIndent bool, noIndent bool, excludedField ...string) string {
+func valueString(v reflect.Value, depth, ptrcnt int, indent string, disableIndent bool, noIndent bool, excludedField ...string) string {
 	var out string
 	if depth < 0 {
 		return " ..."
@@ -125,17 +113,17 @@ func debugValueStr(v reflect.Value, depth, ptrcnt int, indent string, disableInd
 	switch v.Kind() {
 	case reflect.Ptr:
 		ptrcnt++
-		out = "*" + debugValueStr(v.Elem(), depth, ptrcnt, indent, true, noIndent, excludedField...)
+		out = "*" + valueString(v.Elem(), depth, ptrcnt, indent, true, noIndent, excludedField...)
 	case reflect.Interface:
 		ptrcnt++
-		out = "٭" + debugValueStr(v.Elem(), depth, ptrcnt, indent, true, noIndent, excludedField...)
+		out = "٭" + valueString(v.Elem(), depth, ptrcnt, indent, true, noIndent, excludedField...)
 	case reflect.Slice:
 		out = fmt.Sprintf("%s(", v.Type())
 		for i := 0; i < v.Len(); i++ {
 			if !noIndent && depth > 0 {
 				out += "\n"
 			}
-			out += debugValueStr(v.Index(i), depth-1, 0, indent+"• ", false, noIndent, excludedField...)
+			out += valueString(v.Index(i), depth-1, 0, indent+"• ", false, noIndent, excludedField...)
 		}
 		out += ")"
 	case reflect.Struct:
@@ -145,14 +133,14 @@ func debugValueStr(v reflect.Value, depth, ptrcnt int, indent string, disableInd
 			fv := v.Field(i)
 			ft := t.Field(i)
 			if areSameType(ft.Type, t) {
-				continue
+				depth = 0
 			}
 			if isExcludedField(ft.Name, excludedField...) {
 				depth = 0
 			}
 			if noIndent {
 				if fv.CanInterface() {
-					out += fmt.Sprintf("\n%s:%v", ft.Name, debugValueStr(fv, depth-1, 0, indent+"• ", true, noIndent, excludedField...))
+					out += fmt.Sprintf("\n%s:%v", ft.Name, valueString(fv, depth-1, 0, indent+"• ", true, noIndent, excludedField...))
 				} else {
 					out += fmt.Sprintf("\n%s:%v", ft.Name, fv)
 				}
@@ -163,7 +151,7 @@ func debugValueStr(v reflect.Value, depth, ptrcnt int, indent string, disableInd
 					out += " "
 				}
 				if fv.CanInterface() {
-					out += fmt.Sprintf("%s:%v", ft.Name, debugValueStr(fv, depth-1, 0, indent+"• ", true, noIndent, excludedField...))
+					out += fmt.Sprintf("%s:%v", ft.Name, valueString(fv, depth-1, 0, indent+"• ", true, noIndent, excludedField...))
 				} else {
 					out += fmt.Sprintf("%s:%v", ft.Name, fv)
 				}
@@ -183,14 +171,14 @@ func debugValueStr(v reflect.Value, depth, ptrcnt int, indent string, disableInd
 				}
 			}
 			if noIndent {
-				out += fmt.Sprintf("\n%v:%s", k, debugValueStr(e, depth-1, 0, indent+"• ", true, noIndent, excludedField...))
+				out += fmt.Sprintf("\n%v:%s", k, valueString(e, depth-1, 0, indent+"• ", true, noIndent, excludedField...))
 			} else {
 				if _depth > 0 {
 					out += fmt.Sprintf("\n%s", indent+"• ")
 				} else {
 					out += " "
 				}
-				out += fmt.Sprintf("%v:%s", k, debugValueStr(e, depth-1, 0, indent+"• ", true, noIndent, excludedField...))
+				out += fmt.Sprintf("%v:%s", k, valueString(e, depth-1, 0, indent+"• ", true, noIndent, excludedField...))
 			}
 			depth = _depth
 		}
@@ -206,4 +194,32 @@ func debugValueStr(v reflect.Value, depth, ptrcnt int, indent string, disableInd
 		return out
 	}
 	return indent + out
+}
+
+// isValueNil returns true if either value is nil, or has dynamic type {ptr,
+// map, slice} with value nil.
+func isValueNil(value interface{}) bool {
+	if value == nil {
+		return true
+	}
+	switch reflect.TypeOf(value).Kind() {
+	case reflect.Slice, reflect.Ptr, reflect.Map:
+		return reflect.ValueOf(value).IsNil()
+	}
+	return false
+}
+
+// areSameType returns true if t1 and t2 has the same reflect.Type,
+// otherwise it returns false.
+func areSameType(t1 reflect.Type, t2 reflect.Type) bool {
+	b1 := getBaseType(t1)
+	b2 := getBaseType(t2)
+	return b1 == b2
+}
+
+// getBaseType returns not reflect.Ptr type.
+func getBaseType(t reflect.Type) reflect.Type {
+	for ; t.Kind() == reflect.Ptr; t = t.Elem() {
+	}
+	return t
 }
