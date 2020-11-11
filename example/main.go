@@ -1,7 +1,9 @@
 package main
 
 import (
-	"dump"
+	"fmt"
+
+	"github.com/neoul/gdump"
 )
 
 type inside struct {
@@ -30,5 +32,9 @@ func main() {
 		boolNotPresent: true,
 		Inside:         inside{Integerval: 20},
 	}
-	dump.DebugValueString()
+	// print gs to Stdout
+	gdump.Print(gs)
+
+	// = gdump.Print(gs)
+	gdump.ValueDump(gs, 3, func(x ...interface{}) { fmt.Print(x...) })
 }
