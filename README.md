@@ -10,7 +10,7 @@ package main
 import (
     "fmt"
 
-    "github.com/neoul/gostruct-dump/dump"
+    "github.com/neoul/gdump"
 )
 
 type inside struct {
@@ -40,10 +40,10 @@ func main() {
         Inside:         inside{Integerval: 20},
     }
     // print gs to Stdout
-    dump.Print(gs)
+    gdump.Print(gs)
 
-    // = dump.Print(gs)
-    dump.ValueDump(gs, 3, func(x ...interface{}) { fmt.Print(x...) })
+    // = gdump.Print(gs)
+    gdump.ValueDump(gs, 3, func(x ...interface{}) { fmt.Print(x...) })
 }
 
 ```
