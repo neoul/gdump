@@ -21,6 +21,13 @@ func Print(value ...interface{}) {
 	}
 }
 
+// PrintInDepth - print the input value to Stdout
+func PrintInDepth(level int, value ...interface{}) {
+	for _, v := range value {
+		ValueDump(v, level, func(x ...interface{}) { fmt.Print(x...) })
+	}
+}
+
 // ValueDump returns a string representation of value which may be a value, ptr,
 // or struct type.
 // - value: The value to print.
