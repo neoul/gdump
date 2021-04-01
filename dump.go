@@ -144,6 +144,7 @@ func valueString(v reflect.Value, depth, ptrcnt int, indent string, disableInden
 			}
 			if isExcludedField(ft.Name, excludedField...) {
 				depth = 0
+				continue
 			}
 			if noIndent {
 				if fv.CanInterface() {
