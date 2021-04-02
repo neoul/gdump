@@ -94,27 +94,27 @@ func valueString(v reflect.Value, depth, ptrcnt int, indent string, disableInden
 	}
 	if v.Type() == reflect.TypeOf(nil) {
 		if disableIndent || noIndent {
-			return "nil(nil)"
+			return "nil{nil}"
 		}
-		return indent + "nil(nil)"
+		return indent + "nil{nil}"
 	}
 	if v.IsZero() {
 		if disableIndent || noIndent {
-			return fmt.Sprintf("%s(%v)", v.Type(), v)
+			return fmt.Sprintf("%s{%v}", v.Type(), v)
 		}
-		return indent + fmt.Sprintf("%s(%v)", v.Type(), v)
+		return indent + fmt.Sprintf("%s{%v}", v.Type(), v)
 	}
 	if !v.IsValid() {
 		if disableIndent || noIndent {
-			return fmt.Sprintf("%s(invalid)", v.Type())
+			return fmt.Sprintf("%s{invalid}", v.Type())
 		}
-		return indent + fmt.Sprintf("%s(invalid)", v.Type())
+		return indent + fmt.Sprintf("%s{invalid}", v.Type())
 	}
 	if v.Kind() == reflect.Ptr && v.IsNil() || isValueNil(v.Interface()) {
 		if disableIndent || noIndent {
-			return fmt.Sprintf("%s(nil)", v.Type())
+			return fmt.Sprintf("%s{nil}", v.Type())
 		}
-		return indent + fmt.Sprintf("%s(nil)", v.Type())
+		return indent + fmt.Sprintf("%s{nil}", v.Type())
 	}
 	_depth := depth
 	switch v.Kind() {
@@ -123,19 +123,19 @@ func valueString(v reflect.Value, depth, ptrcnt int, indent string, disableInden
 		out = "*" + valueString(v.Elem(), depth, ptrcnt, indent, true, noIndent, excludedField...)
 	case reflect.Interface:
 		ptrcnt++
-		out = "٭" + valueString(v.Elem(), depth, ptrcnt, indent, true, noIndent, excludedField...)
+		out = "○" + valueString(v.Elem(), depth, ptrcnt, indent, true, noIndent, excludedField...)
 	case reflect.Slice:
-		out = fmt.Sprintf("%s(", v.Type())
+		out = fmt.Sprintf("%s{", v.Type())
 		for i := 0; i < v.Len(); i++ {
 			if !noIndent && depth > 0 {
 				out += "\n"
 			}
 			out += valueString(v.Index(i), depth-1, 0, indent+"• ", false, noIndent, excludedField...)
 		}
-		out += ")"
+		out += "}"
 	case reflect.Struct:
 		t := v.Type()
-		out = fmt.Sprintf("%s(", v.Type())
+		out = fmt.Sprintf("%s{", v.Type())
 		for i := 0; i < v.NumField(); i++ {
 			fv := v.Field(i)
 			ft := t.Field(i)
@@ -143,7 +143,6 @@ func valueString(v reflect.Value, depth, ptrcnt int, indent string, disableInden
 				depth = 0
 			}
 			if isExcludedField(ft.Name, excludedField...) {
-				depth = 0
 				continue
 			}
 			if noIndent {
@@ -166,9 +165,9 @@ func valueString(v reflect.Value, depth, ptrcnt int, indent string, disableInden
 			}
 			depth = _depth
 		}
-		out += ")"
+		out += "}"
 	case reflect.Map:
-		out = fmt.Sprintf("%s(", v.Type())
+		out = fmt.Sprintf("%s{", v.Type())
 		iter := v.MapRange()
 		for iter.Next() {
 			k := iter.Key()
@@ -190,13 +189,13 @@ func valueString(v reflect.Value, depth, ptrcnt int, indent string, disableInden
 			}
 			depth = _depth
 		}
-		out += ")"
+		out += "}"
 	default:
-		out = fmt.Sprintf("%s(", v.Type())
+		out = fmt.Sprintf("%s{", v.Type())
 		for i := 0; i < ptrcnt; i++ {
 			out = out + "&"
 		}
-		out = out + fmt.Sprintf("%v)", v)
+		out = out + fmt.Sprintf("%v}", v)
 	}
 	if disableIndent || noIndent {
 		return out
